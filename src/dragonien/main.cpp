@@ -12,7 +12,7 @@ int main()
 {
 	console::setup();
 
-	console::print("{C=RED}[{C=GREEN}O{C=RED}]{C=WHITE}\n", true);
+	console::print("{C=YELLOW}[{C=GREEN}O{C=RED}]{R}Hello!\n", true);
 
 
 	system("PAUSE");

@@ -40,7 +40,15 @@ void console::print(std::string text, bool parse)
 
 				for (int j = i; j < text.size(); j++)
 				{
-					if (text[j] == '=')
+					if (text[j] == '}')
+					{
+						i++;
+						j++;
+
+						value = "";
+						goto loop;
+					}
+					else if (text[j] == '=')
 					{
 						i++;
 						j++;
@@ -66,6 +74,7 @@ void console::print(std::string text, bool parse)
 			}
 			else
 			{
+				int abs = 0;
 				if (command == "C" || command == "COLOR" || command == "COLOUR")
 				{
 					int v = 0;
@@ -109,7 +118,10 @@ void console::print(std::string text, bool parse)
 
 					SetConsoleTextAttribute(hstdout, v);
 				}
-
+				else if (command == "R")
+				{
+					SetConsoleTextAttribute(hstdout, DEFAULT_COLOR_FOREGROUND + (DEFAULT_COLOR_BACKGROUND << 4));
+				}
 				std::cout << text[i];
 				index++;
 
