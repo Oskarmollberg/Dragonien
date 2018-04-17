@@ -6,9 +6,10 @@
 
 #include <windows.h>
 
+#include <algorithm>
+
 #include "color.h"
 #include "console.h"
-
 
 static HWND window;
 
@@ -81,7 +82,7 @@ void console::print(std::string text, bool parse)
 			}
 			else
 			{
-				int abs = 0;
+				std::transform(command.begin(), command.end(), command.begin(), ::toupper);	// Convers command to uppercase.
 				if (command == "C" || command == "COLOR" || command == "COLOUR")
 				{
 					int v = 0;
@@ -125,9 +126,13 @@ void console::print(std::string text, bool parse)
 
 					SetConsoleTextAttribute(hstdout, v);
 				}
-				if (command == "D" || command == "DELAY")
+				else if (command == "D" || command == "DELAY")
 				{
 					delay = std::stoi(value, nullptr, 10);
+				}
+				else if (command == "S" || command == "SLEEP")
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(value)));
 				}
 				else if (command == "R")
 				{
@@ -152,15 +157,10 @@ void console::print(std::string text, bool parse)
 	}
 	else
 	{
-		std::cout << text;
+		for (int i = 0; i < text.size(); i++)
+		{
+			std::cout << text[i];
+			std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+		}
 	}
-}
-
-void console::setColor(int c)
-{
-	SetConsoleTextAttribute(hstdout, c);
-}
-void console::setColor(color c)
-{
-	SetConsoleTextAttribute(hstdout, c);
 }
