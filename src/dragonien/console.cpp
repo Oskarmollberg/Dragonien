@@ -1,6 +1,9 @@
 #include <iostream>
 #include <string>
 
+#include <thread>
+#include <chrono>
+
 #include <windows.h>
 
 #include "color.h"
@@ -11,6 +14,8 @@ static HWND window;
 
 static HANDLE hstdin;
 static HANDLE hstdout;
+
+const int DEFAULT_DELAY_MS = 30;
 
 const color DEFAULT_COLOR_FOREGROUND = color::WHITE;
 const color DEFAULT_COLOR_BACKGROUND = color::BLACK;
@@ -27,6 +32,8 @@ void console::print(std::string text, bool parse)
 {
 	std::string command("");
 	std::string value("");
+
+	int delay = DEFAULT_DELAY_MS;
 
 	int index = 0;
 	if (parse)
@@ -118,15 +125,28 @@ void console::print(std::string text, bool parse)
 
 					SetConsoleTextAttribute(hstdout, v);
 				}
+				if (command == "D" || command == "DELAY")
+				{
+					delay = std::stoi(value, nullptr, 10);
+				}
 				else if (command == "R")
 				{
-					SetConsoleTextAttribute(hstdout, DEFAULT_COLOR_FOREGROUND + (DEFAULT_COLOR_BACKGROUND << 4));
+					if (value == "")			// Resets all effects.
+					{
+						SetConsoleTextAttribute(hstdout, DEFAULT_COLOR_FOREGROUND + (DEFAULT_COLOR_BACKGROUND << 4));
+					}
+					else if (value == "COLOR")	// Resets color.
+					{
+						SetConsoleTextAttribute(hstdout, DEFAULT_COLOR_FOREGROUND + (DEFAULT_COLOR_BACKGROUND << 4));
+					}
 				}
 				std::cout << text[i];
 				index++;
 
 				command = "";
 				value = "";
+
+				std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 			}
 		}
 	}
