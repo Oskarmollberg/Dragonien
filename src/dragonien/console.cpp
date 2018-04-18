@@ -11,10 +11,11 @@
 #include "color.h"
 #include "console.h"
 
-static HWND window;
+static HWND window;		//Console handle
+static HDC hdc;			// Device Context handle
 
-static HANDLE hstdin;
-static HANDLE hstdout;
+static HANDLE hstdin;	// Console Handle In
+static HANDLE hstdout;	// Console Handle Out
 
 const int DEFAULT_DELAY_MS = 30;
 
@@ -23,32 +24,33 @@ const color DEFAULT_COLOR_BACKGROUND = color::BLACK;
 
 void console::setup()
 {
-	window = GetConsoleWindow();
+	window	= GetConsoleWindow();
+	hdc		= GetDC(window);
 
-	hstdin = GetStdHandle(STD_INPUT_HANDLE);
+	hstdin	= GetStdHandle(STD_INPUT_HANDLE);
 	hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
 }
 
-void console::print(std::string text, bool parse)
+void console::print(std::string s, bool parse)
 {
 	std::string command("");
 	std::string value("");
 
-	int delay = DEFAULT_DELAY_MS;
+	int delay = 0;
 
 	int index = 0;
 	if (parse)
 	{
-		for (int i = 0; i < text.size(); i++)
+		for (size_t i = 0; i < s.size(); i++)
 		{
 		loop:
-			if (text[i] == '{')
+			if (s[i] == '{')
 			{
 				i++;
 
-				for (int j = i; j < text.size(); j++)
+				for (size_t j = i; j < s.size(); j++)
 				{
-					if (text[j] == '}')
+					if (s[j] == '}')
 					{
 						i++;
 						j++;
@@ -56,26 +58,26 @@ void console::print(std::string text, bool parse)
 						value = "";
 						goto loop;
 					}
-					else if (text[j] == '=')
+					else if (s[j] == '=')
 					{
 						i++;
 						j++;
-						for (int k = j; k < text.size(); k++)
+						for (size_t k = j; k < s.size(); k++)
 						{
-							if (text[k] == '}')
+							if (s[k] == '}')
 							{
 								i++;
 								goto loop;
 							}
 
-							value.push_back(text[k]);
+							value.push_back(s[k]);
 							i++;
 							j++;
 						}
 					}
 					else
 					{
-						command.push_back(text[j]);
+						command.push_back(s[j]);
 						i++;
 					}
 				}
@@ -145,11 +147,12 @@ void console::print(std::string text, bool parse)
 						SetConsoleTextAttribute(hstdout, DEFAULT_COLOR_FOREGROUND + (DEFAULT_COLOR_BACKGROUND << 4));
 					}
 				}
-				std::cout << text[i];
+
+				std::cout << s[i];
 				index++;
 
-				command = "";
-				value = "";
+				command = "";		// Resets command string.
+				value = "";			// Resets value string.
 
 				std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 			}
@@ -157,10 +160,36 @@ void console::print(std::string text, bool parse)
 	}
 	else
 	{
-		for (int i = 0; i < text.size(); i++)
+		for (size_t i = 0; i < s.size(); i++)
 		{
-			std::cout << text[i];
+			std::cout << s[i];
 			std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 		}
 	}
+}
+void console::printraw(std::string s)
+{
+	std::cout << s;
+}
+
+int console::getWidth()
+{
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	GetConsoleScreenBufferInfo(hstdout, &csbi);
+
+	return (csbi.srWindow.Right - csbi.srWindow.Left) + 1;
+}
+
+int console::getHeight()
+{
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	GetConsoleScreenBufferInfo(hstdout, &csbi);
+
+	return (csbi.srWindow.Bottom - csbi.srWindow.Top) + 1;
+}
+
+void console::setCursor(int x, int y)
+{
+	COORD pos = { x,y };
+	SetConsoleCursorPosition(hstdout, pos);
 }
