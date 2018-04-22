@@ -7,9 +7,14 @@
 #include <windows.h>
 
 #include <algorithm>
+#include <vector>
 
 #include "color.h"
 #include "console.h"
+
+#include "util.h"
+#include "effect.h"
+
 
 static HWND window;		//Console handle
 static HDC hdc;			// Device Context handle
@@ -22,6 +27,8 @@ const int DEFAULT_DELAY_MS = 30;
 const color DEFAULT_COLOR_FOREGROUND = color::WHITE;
 const color DEFAULT_COLOR_BACKGROUND = color::BLACK;
 
+int delay = DEFAULT_DELAY_MS;
+
 void console::setup()
 {
 	window	= GetConsoleWindow();
@@ -31,137 +38,150 @@ void console::setup()
 	hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
 }
 
+void console::command(std::string command, int value)
+{
+	console::command(command, std::to_string(value));
+}
+void console::command(std::string command, std::string value)
+{
+	std::transform(command.begin(), command.end(), command.begin(), ::toupper);	// Converts command to uppercase.
+	if		(command == "C" || command == "COLOR" || command == "COLOUR")
+	{
+		SetConsoleTextAttribute(hstdout, std::stoi(value));
+	}
+	else if (command == "D" || command == "DELAY")
+	{
+		delay = std::stoi(value, nullptr, 10);
+	}
+	else if (command == "S" || command == "SLEEP")
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(value)));
+	}
+	else if (command == "R" || command == "RESET")
+	{
+		if (value == "")			// Resets all effects.
+		{
+			SetConsoleTextAttribute(hstdout, DEFAULT_COLOR_FOREGROUND + (DEFAULT_COLOR_BACKGROUND << 4));
+		}
+		else if (value == "COLOR")	// Resets color.
+		{
+			SetConsoleTextAttribute(hstdout, DEFAULT_COLOR_FOREGROUND + (DEFAULT_COLOR_BACKGROUND << 4));
+		}
+	}
+}
+
+void console::parse(std::string &s, std::vector<effect> &effects)
+{
+	std::string command("");
+	std::string value("");
+
+	std::string result;
+
+	int index = 0;
+
+	for (size_t i = 0; i < s.size(); i++)
+	{
+		loop:
+		if (s[i] == '{')
+		{
+			i++;
+
+			for (size_t j = i; j < s.size(); j++)
+			{
+				if (s[j] == '}')
+				{
+					i++;
+					j++;
+
+					effects.push_back(effect());
+
+					effects[effects.size() - 1].index = index;
+					effects[effects.size() - 1].command = command;
+					effects[effects.size() - 1].value = value;
+
+					command = "";
+					value = "";
+
+					goto loop;
+				}
+				else if (s[j] == '=')
+				{
+					i++;
+					j++;
+					for (size_t k = j; k < s.size(); k++)
+					{
+						if (s[k] == '}')
+						{
+							i++;
+
+							effects.push_back(effect());
+
+							effects[effects.size() - 1].index = index;
+							effects[effects.size() - 1].command = command;
+							effects[effects.size() - 1].value = value;
+
+							command = "";
+							value = "";
+
+							goto loop;
+						}
+
+						value.push_back(s[k]);
+						i++;
+						j++;
+					}
+				}
+				else
+				{
+					command.push_back(s[j]);
+					i++;
+				}
+			}
+		}
+		else
+		{
+			if(i < s.size())
+				result.push_back(s[i]);
+		}
+
+		index++;
+	}
+
+	s = result;
+}
+
 void console::print(std::string s, bool parse)
 {
 	std::string command("");
 	std::string value("");
 
-	int delay = 0;
+	std::vector<effect> effects;
 
-	int index = 0;
-	if (parse)
-	{
-		for (size_t i = 0; i < s.size(); i++)
+	console::parse(s, effects);
+
+	if (s.empty())		// If	: The string only consists of commands ~ apply them.
+	{					// Else	: Print the string using the effects at correct indexes.
+		for (const effect& effect : effects)
 		{
-		loop:
-			if (s[i] == '{')
-			{
-				i++;
-
-				for (size_t j = i; j < s.size(); j++)
-				{
-					if (s[j] == '}')
-					{
-						i++;
-						j++;
-
-						value = "";
-						goto loop;
-					}
-					else if (s[j] == '=')
-					{
-						i++;
-						j++;
-						for (size_t k = j; k < s.size(); k++)
-						{
-							if (s[k] == '}')
-							{
-								i++;
-								goto loop;
-							}
-
-							value.push_back(s[k]);
-							i++;
-							j++;
-						}
-					}
-					else
-					{
-						command.push_back(s[j]);
-						i++;
-					}
-				}
-			}
-			else
-			{
-				std::transform(command.begin(), command.end(), command.begin(), ::toupper);	// Convers command to uppercase.
-				if (command == "C" || command == "COLOR" || command == "COLOUR")
-				{
-					int v = 0;
-
-					if (value == "DEFAULT")
-						v = DEFAULT_COLOR_FOREGROUND;
-					else if (value == "BLACK")
-						v = color::BLACK;
-					else if (value == "DARK_BLUE" || value == "DARKBLUE")
-						v = color::DARK_BLUE;
-					else if (value == "DARK_GREEN" || value == "DARKGREEN")
-						v = color::DARK_GREEN;
-					else if (value == "DARK_CYAN" || value == "DARKCYAN")
-						v = color::DARK_CYAN;
-					else if (value == "DARK_RED" || value == "DARKRED")
-						v = color::DARK_RED;
-					else if (value == "DARK_MAGENTA" || value == "DARKMAGENTA")
-						v = color::DARK_MAGENTA;
-					else if (value == "BROWN")
-						v = color::BROWN;
-					else if (value == "LIGHT_GRAY" || value == "LIGHTGRAY")
-						v = color::LIGHT_GRAY;
-					else if (value == "GRAY")
-						v = color::GRAY;
-					else if (value == "BLUE")
-						v = color::BLUE;
-					else if (value == "GREEN")
-						v = color::GREEN;
-					else if (value == "CYAN")
-						v = color::CYAN;
-					else if (value == "RED")
-						v = color::RED;
-					else if (value == "MAGENTA")
-						v = color::MAGENTA;
-					else if (value == "YELLOW")
-						v = color::YELLOW;
-					else if (value == "WHITE")
-						v = color::WHITE;
-					else
-						v = std::stoul(value, nullptr, 16);
-
-					SetConsoleTextAttribute(hstdout, v);
-				}
-				else if (command == "D" || command == "DELAY")
-				{
-					delay = std::stoi(value, nullptr, 10);
-				}
-				else if (command == "S" || command == "SLEEP")
-				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(value)));
-				}
-				else if (command == "R")
-				{
-					if (value == "")			// Resets all effects.
-					{
-						SetConsoleTextAttribute(hstdout, DEFAULT_COLOR_FOREGROUND + (DEFAULT_COLOR_BACKGROUND << 4));
-					}
-					else if (value == "COLOR")	// Resets color.
-					{
-						SetConsoleTextAttribute(hstdout, DEFAULT_COLOR_FOREGROUND + (DEFAULT_COLOR_BACKGROUND << 4));
-					}
-				}
-
-				std::cout << s[i];
-				index++;
-
-				command = "";		// Resets command string.
-				value = "";			// Resets value string.
-
-				std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-			}
+			console::command(effect.command, effect.value);
 		}
 	}
 	else
 	{
-		for (size_t i = 0; i < s.size(); i++)
+		for (int i = 0; i < s.size(); i++)
 		{
+			std::vector<effect> effects_to_apply;
+
+			std::copy_if(effects.begin(), effects.end(), std::back_inserter(effects_to_apply), [&](const effect & item)
+			{
+				return item.index == i;
+			});
+
+			for (const effect& effect : effects_to_apply)
+			{
+				console::command(effect.command, effect.value);
+			}
+
 			std::cout << s[i];
 			std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 		}
@@ -172,6 +192,15 @@ void console::printraw(std::string s)
 	std::cout << s;
 }
 
+void console::showCursor(bool b)
+{
+	CONSOLE_CURSOR_INFO info;
+
+	GetConsoleCursorInfo(hstdout, &info);
+	info.bVisible = b;
+	SetConsoleCursorInfo(hstdout, &info);
+}
+
 int console::getWidth()
 {
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -179,7 +208,6 @@ int console::getWidth()
 
 	return (csbi.srWindow.Right - csbi.srWindow.Left) + 1;
 }
-
 int console::getHeight()
 {
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -188,7 +216,7 @@ int console::getHeight()
 	return (csbi.srWindow.Bottom - csbi.srWindow.Top) + 1;
 }
 
-void console::setCursor(int x, int y)
+void console::setCursorPosition(int x, int y)
 {
 	COORD pos = { x,y };
 	SetConsoleCursorPosition(hstdout, pos);

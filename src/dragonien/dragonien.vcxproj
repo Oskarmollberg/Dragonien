@@ -116,16 +116,20 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="console.cpp" />
+    <ClCompile Include="effect.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="image.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="color.h" />
     <ClInclude Include="console.h" />
     <ClInclude Include="display.h" />
+    <ClInclude Include="effect.h" />
     <ClInclude Include="game.h" />
     <ClInclude Include="image.h" />
+    <ClInclude Include="util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
