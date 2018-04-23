@@ -4,17 +4,19 @@
 class image
 {
 public:
-	image(std::string data);
+	image(std::string data, std::string palette);
 	
 	std::string getData();
+	std::string getPalette();
 
-	int getPixelData(int x, int y);
+	color getPixelData(int x, int y);
 
 	int getWidth();
 	int getHeight();
 
 private:
 	std::string _data;
+	std::string _palette;
 };
 
 #endif // !IMAGE_H
