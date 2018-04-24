@@ -15,7 +15,7 @@
 
 using namespace std;
 
-game core;
+game core; // Hejealliip
 
 void display()
 {
